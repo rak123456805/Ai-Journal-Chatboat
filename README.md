@@ -23,8 +23,7 @@ Created as part of the **Advaya Hackathon 2024** under the theme:
 
 ## 👥 Team Members
 
-- **Aditya K** (Team Leader)  
-  📧 adityak.10102005@gmail.com  
+- **Aditya K**
 
 - **Punarvi M U**
 
