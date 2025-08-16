@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Serene - AI Journal Chatbot</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* === Sidebar Styles === */
+    .sidebar {
+      width: 250px;
+      background-color: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      overflow-y: auto;
+      transform: translateX(0);
+      transition: transform 0.3s ease-in-out;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar.hidden {
+      transform: translateX(-100%);
+    }
+    .sidebar-header {
+      padding: 1rem;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-bottom: 1px solid var(--sidebar-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-list {
+      flex: 1;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .history-item {
+      padding: 0.8rem 1rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--sidebar-border);
+      transition: background-color 0.2s;
+    }
+    .history-item:hover {
+      background-color: var(--sidebar-hover);
+    }
+    .toggle-sidebar {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--sidebar-text);
+    }
+
+    /* Dark/Light Theme Variables */
+    :root[data-theme="light"] {
+      --sidebar-bg: #f9f9f9;
+      --sidebar-text: #222;
+      --sidebar-border: #ddd;
+      --sidebar-hover: #e5e5e5;
+    }
+    :root[data-theme="dark"] {
+      --sidebar-bg: #1f1f1f;
+      --sidebar-text: #f0f0f0;
+      --sidebar-border: #333;
+      --sidebar-hover: #2b2b2b;
+    }
+
+    /* Adjust main chat area when sidebar is present */
+    .main-content {
+      margin-left: 250px;
+      transition: margin-left 0.3s ease-in-out;
+    }
+    .sidebar.hidden ~ .main-content {
+      margin-left: 0;
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+<body onload="checkAuth();">
+
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar hidden">
+    <div class="sidebar-header">
+      <span>Chat History</span>
+      <button class="toggle-sidebar" onclick="toggleSidebar()">✖</button>
+    </div>
+    <ul id="historyList" class="history-list"></ul>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <nav class="navbar">
+      <div class="nav-left">
+        <button class="toggle-sidebar" onclick="toggleSidebar()">☰</button>
+        <h1 class="clickable" onclick="window.location.href='index.html';">Serene</h1>
+      </div>
+      <div class="nav-right">
+        <button id="theme-toggle">🌙</button>
+        <button id="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </nav>
+
+    <div class="chat-container">
+      <div id="chat-output" class="chat-output"></div>
+      <div class="input-area">
+        <input type="text" id="user-input" placeholder="Type your message..." autofocus />
+        <button id="send-btn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const sendBtn = document.getElementById("send-btn");
+    const userInput = document.getElementById("user-input");
+    const chatOutput = document.getElementById("chat-output");
+    const historyList = document.getElementById("historyList");
+    const sidebar = document.getElementById("sidebar");
+
+    sendBtn.addEventListener("click", sendMessage);
+    userInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+
+    function appendMessage(sender, message) {
+      const msgDiv = document.createElement("div");
+      msgDiv.classList.add("message");
+      msgDiv.classList.add(sender === "user" ? "user-message" : "bot-message");
+      msgDiv.innerHTML = `<div class="bubble">${sender === "user" ? "You" : "Serene"}: ${message}</div>`;
+      chatOutput.appendChild(msgDiv);
+      chatOutput.scrollTop = chatOutput.scrollHeight;
+    }
+
+    function sendMessage() {
+      const message = userInput.value.trim();
+      if (!message) return;
+      appendMessage("user", message);
+      saveMessageToHistory(message, "user");
+      userInput.value = "";
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        appendMessage("bot", "Please log in to continue chatting.");
+        return;
+      }
+
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          message: message,
+          sessionId: localStorage.getItem('sessionId') || null
+        }),
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          appendMessage("bot", data.response);
+          saveMessageToHistory(data.response, "bot");
+          if (data.sessionId) {
+            localStorage.setItem('sessionId', data.sessionId);
+          }
+        } else {
+          appendMessage("bot", "Sorry, I couldn't process your message.");
+        }
+      })
+      .catch(err => {
+        appendMessage("bot", "Sorry, I couldn't reach the server.");
+        console.error("Fetch error:", err);
+      });
+    }
+
+    // Chat History Management
+    function saveMessageToHistory(message, sender) {
+      let sessionId = localStorage.getItem('sessionId');
+      if (!sessionId) {
+        sessionId = Date.now().toString();
+        localStorage.setItem('sessionId', sessionId);
+        createHistoryItem(sessionId, message);
+      }
+      const history = JSON.parse(localStorage.getItem('chatHistory') || "{}");
+      if (!history[sessionId]) history[sessionId] = [];
+      history[sessionId].push({ sender, message });
+      localStorage.setItem('chatHistory', JSON.stringify(history));
+    }
+
+    function createHistoryItem(sessionId, firstMessage) {
+      const li = document.createElement("li");
+      li.classList.add("history-item");
+      li.textContent = firstMessage.length > 20 ? firstMessage.slice(0, 20) + "..." : firstMessage;
+      li.onclick = () => loadChatSession(sessionId);
+      li.dataset.sessionId = sessionId;
+      historyList.appendChild(li);
+    }
+
+    function loadHistoryList() {
+      const history = JSON.parse(localStorage.getItem('chatHistory') || "{}");
+      historyList.innerHTML = "";
+      for (const sessionId in history) {
+        const firstMessage = history[sessionId][0]?.message || "New Chat";
+        createHistoryItem(sessionId, firstMessage);
+      }
+    }
+
+    function loadChatSession(sessionId) {
+      localStorage.setItem('sessionId', sessionId);
+      chatOutput.innerHTML = "";
+      const history = JSON.parse(localStorage.getItem('chatHistory') || "{}");
+      if (history[sessionId]) {
+        history[sessionId].forEach(msg => appendMessage(msg.sender, msg.message));
+      }
+      toggleSidebar();
+    }
+
+    function toggleSidebar() {
+      sidebar.classList.toggle("hidden");
+    }
+
+    // Theme Toggle
+    const toggleBtn = document.getElementById("theme-toggle");
+    const root = document.documentElement;
+
+    window.onload = () => {
+      const savedTheme = localStorage.getItem("theme") || "light";
+      root.setAttribute("data-theme", savedTheme);
+      toggleBtn.textContent = savedTheme === "dark" ? "🌞" : "🌙";
+      appendMessage("bot", "Hi, I'm Serene! How are you feeling today?");
+      loadHistoryList();
+    };
+
+    toggleBtn.addEventListener("click", () => {
+      const current = root.getAttribute("data-theme");
+      const newTheme = current === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", newTheme);
+      localStorage.setItem("theme", newTheme);
+      toggleBtn.textContent = newTheme === "dark" ? "🌞" : "🌙";
+    });
+
+    // Auth check
+    function checkAuth() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "/login";
+        return;
+      }
+      fetch("/api/profile", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          window.location.href = "/login";
+        }
+      })
+      .catch(err => {
+        console.error("Auth check error:", err);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+      });
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("sessionId");
+      window.location.href = "/";
+    }
+  </script>
+</body>
+</html>

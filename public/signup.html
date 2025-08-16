@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Serene Signup</title>
+<style>
+  body {
+    font-family: 'Helvetica', sans-serif;
+    background: linear-gradient(to right, #a8edea, #fed6e3);
+    margin: 0;
+  }
+
+  /* Navbar */
+  nav {
+    background: rgba(255,255,255,0.9);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  nav a {
+    text-decoration: none;
+    color: #333;
+    margin-left: 15px;
+    font-weight: bold;
+  }
+
+  .signup-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: calc(100vh - 70px);
+  }
+
+  .signup-box {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    width: 350px;
+    animation: fadeIn 1s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    0% {opacity: 0; transform: translateY(-20px);}
+    100% {opacity: 1; transform: translateY(0);}
+  }
+
+  h2 { text-align: center; margin-bottom: 30px; color: #333; }
+
+  .input-group { position: relative; margin-bottom: 25px; }
+  .input-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    outline: none;
+    transition: all 0.3s ease;
+    font-size: 16px;
+  }
+  .input-group input:focus {
+    border-color: #7dd56f;
+    box-shadow: 0 0 10px rgba(125, 213, 111, 0.3);
+  }
+  .input-group label {
+    position: absolute;
+    top: 12px;
+    left: 15px;
+    pointer-events: none;
+    color: #999;
+    transition: 0.3s ease all;
+  }
+  .input-group input:focus + label,
+  .input-group input:not(:placeholder-shown) + label {
+    top: -10px;
+    left: 10px;
+    font-size: 12px;
+    color: #7dd56f;
+    background: white;
+    padding: 0 5px;
+  }
+
+  button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: #7dd56f;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  button:hover { background: #5cb85c; }
+
+  .signup-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #555;
+  }
+  .signup-footer a { color: #7dd56f; text-decoration: none; }
+  .signup-footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div><strong>Serene</strong></div>
+  <div>
+    <a href="login.html">Login</a>
+    <a href="signup.html">Sign Up</a>
+  </div>
+</nav>
+
+<div class="signup-container">
+  <div class="signup-box">
+    <h2>Create Your Account</h2>
+    <form id="signupForm">
+      <div class="input-group">
+        <input type="text" id="username" required placeholder=" ">
+        <label for="username">Username</label>
+      </div>
+      <div class="input-group">
+        <input type="password" id="password" required placeholder=" ">
+        <label for="password">Password</label>
+      </div>
+      <button type="submit">Sign Up</button>
+    </form>
+    <div class="signup-footer">
+      Already have an account? <a href="login.html">Log in</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById('signupForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('Signup successful! Redirecting to login...');
+      window.location.href = 'login.html';
+    } else {
+      alert(data.message || 'Signup failed');
+    }
+  });
+</script>
+
+</body>
+</html>
