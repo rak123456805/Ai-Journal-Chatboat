@@ -35,16 +35,9 @@ Created as part of the **Advaya Hackathon 2024** under the theme:
 ## 👥 Team Members
 
 <<<<<<< HEAD
-- **Aditya K** (Team Leader)  
-  📧 adityak.10102005@gmail.com  
-=======
-- **Aditya K**
->>>>>>> e6561a689c3d2a2f326c680e6d708157cc21c38a
-
+- **Aditya K** (Team Leader) 
 - **Punarvi M U**
-
 - **Rakshith H N**
-
 - **Sunidhi Srikanth Devaru**
 
 ---
