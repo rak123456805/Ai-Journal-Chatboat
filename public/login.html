@@ -13,18 +13,50 @@
 
   /* Navbar */
   nav {
-    background: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.95);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 30px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 12px 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  nav .brand {
+    font-size: 22px;
+    font-weight: bold;
+    color: #333;
+    letter-spacing: 1px;
+    text-decoration: none;
+  }
+  nav .links {
+    display: flex;
+    gap: 20px;
   }
   nav a {
     text-decoration: none;
     color: #333;
-    margin-left: 15px;
-    font-weight: bold;
+    font-weight: 600;
+    font-size: 15px;
+    position: relative;
+    transition: color 0.3s ease;
+  }
+  nav a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    left: 0;
+    bottom: -4px;
+    background: #7dd56f;
+    transition: width 0.3s ease;
+  }
+  nav a:hover {
+    color: #7dd56f;
+  }
+  nav a:hover::after {
+    width: 100%;
   }
 
   .login-container {
@@ -103,13 +135,27 @@
   }
   .login-footer a { color: #7dd56f; text-decoration: none; }
   .login-footer a:hover { text-decoration: underline; }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    nav {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 12px 20px;
+    }
+    nav .links {
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+  }
 </style>
 </head>
 <body>
 
 <nav>
-  <div><strong>Serene</strong></div>
-  <div>
+  <a href="index.html" class="brand">Serene</a>
+  <div class="links">
     <a href="login.html">Login</a>
     <a href="signup.html">Sign Up</a>
   </div>
@@ -150,7 +196,7 @@
     const data = await res.json();
     if (data.success) {
       alert('Login successful! Redirecting to chat...');
-      localStorage.setItem('token', data.token); // store token for chat page
+      localStorage.setItem('token', data.token);
       window.location.href = 'chat.html';
     } else {
       alert(data.message || 'Login failed');

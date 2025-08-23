@@ -1,4 +1,3 @@
-// ====== LOAD ENV VARIABLES ======
 require('dotenv').config();
 
 const express = require('express');
@@ -8,21 +7,14 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-
-// ====== FETCH (compatibility for Node < 18) ======
-let fetchFn;
-try {
-  fetchFn = fetch; // If Node 18+, fetch is global
-} catch {
-  fetchFn = require('node-fetch'); // For Node 16 or lower
-}
+const fetch = require('node-fetch'); // Works in all Node versions
 
 // ====== CONFIG ======
 const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/serene';
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || null;
+const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://127.0.0.1:8000/chat';
 
 // ====== MIDDLEWARE ======
 app.use(cors());
@@ -38,7 +30,7 @@ mongoose
 // ====== USER MODEL ======
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
-  password: { type: String, required: true }
+  password: { type: String, required: true },
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -62,9 +54,8 @@ app.post('/api/register', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.json({ success: false, message: 'Missing fields' });
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-
   try {
+    const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({ username, password: hashedPassword });
     await newUser.save();
     res.json({ success: true, message: 'User registered' });
@@ -95,32 +86,32 @@ app.get('/api/profile', authenticateToken, (req, res) => {
 app.post('/api/chat', authenticateToken, async (req, res) => {
   const { message, sessionId } = req.body;
 
-  if (!message) {
-    return res.json({ success: false, response: 'No message provided' });
-  }
+  if (!message) return res.json({ success: false, response: 'No message provided' });
+
+  let botReply = "I'm here to listen. Tell me more.";
 
   try {
-    let botReply = "I'm here to listen. Tell me more.";
-
-    if (GEMINI_API_KEY) {
-      const aiResponse = await fetchFn('http://127.0.0.1:8000/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message })
-      });
-      const aiData = await aiResponse.json();
-      if (aiData && aiData.reply) botReply = aiData.reply;
-    }
-
-    res.json({
-      success: true,
-      response: botReply,
-      sessionId: sessionId || Date.now().toString()
+    const aiResponse = await fetch(PYTHON_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: message }),
     });
+
+    if (aiResponse.ok) {
+      const aiData = await aiResponse.json();
+      if (aiData && aiData.response) botReply = aiData.response;
+    } else {
+      console.error('Python API Error:', aiResponse.status, aiResponse.statusText);
+    }
   } catch (err) {
-    console.error('Chat error:', err);
-    res.json({ success: false, response: 'Error processing your message.' });
+    console.error('Failed to connect to Python API:', err.message);
   }
+
+  res.json({
+    success: true,
+    response: botReply,
+    sessionId: sessionId || Date.now().toString(),
+  });
 });
 
 // Health check
@@ -128,12 +119,12 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', mongo: mongoose.connection.readyState });
 });
 
-// ====== SPA FALLBACK ======
+// SPA fallback
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'chat.html'));
 });
 
-// ====== START SERVER ======
+// Start server
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
 });

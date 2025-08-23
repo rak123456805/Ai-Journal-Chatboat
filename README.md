@@ -172,6 +172,8 @@ npm run python
 
 **Terminal 2 - Start Node.js server:**
 ```bash
+mongod --dbpath C:\data\db
+
 npm run server
 ```
 

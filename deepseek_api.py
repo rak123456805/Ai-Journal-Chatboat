@@ -66,4 +66,3 @@ async def generate_empathy_response(data: Prompt):
     except Exception as e:
         print("[ERROR]", e)
         return {"response": "I'm here for you, even if I can't find the right words right now. You're not alone."}
-
