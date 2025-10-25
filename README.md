@@ -167,14 +167,19 @@ start.bat
 
 **Terminal 1 - Start Python FastAPI backend:**
 ```bash
-npm run python
+cd Serene-Complete
+python -m uvicorn deepseek_api:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 **Terminal 2 - Start Node.js server:**
 ```bash
-mongod --dbpath C:\data\db
+cd Serene-Complete
+node server.js
+```
 
-npm run server
+**Note:** Make sure MongoDB is running before starting the Node.js server. You can start MongoDB with:
+```bash
+mongod --dbpath C:\data\db
 ```
 
 ### 🌐 Access Points

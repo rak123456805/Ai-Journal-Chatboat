@@ -12,7 +12,7 @@ const fetch = require('node-fetch'); // Works in all Node versions
 // ====== CONFIG ======
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/serene';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/serene_auth';
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://127.0.0.1:8000/chat';
 
@@ -28,11 +28,7 @@ mongoose
   .catch(err => console.error('❌ MongoDB Error:', err));
 
 // ====== USER MODEL ======
-const UserSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-});
-const User = mongoose.model('User', UserSchema);
+const User = require('./models/User');
 
 // ====== AUTH MIDDLEWARE ======
 function authenticateToken(req, res, next) {
@@ -51,30 +47,68 @@ function authenticateToken(req, res, next) {
 
 // Register
 app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.json({ success: false, message: 'Missing fields' });
+  const { username, email, password } = req.body;
+  if (!username || !email || !password) {
+    return res.status(400).json({ success: false, message: 'Username, email, and password are required' });
+  }
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hashedPassword });
+    // Check if user already exists by username or email
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: 'User already exists' });
+    }
+
+    // Create new user (password hashing handled by pre-save hook)
+    const newUser = new User({ username, email, password });
     await newUser.save();
-    res.json({ success: true, message: 'User registered' });
+
+    res.status(201).json({ success: true, message: 'User registered successfully' });
   } catch (err) {
-    res.json({ success: false, message: 'User already exists' });
+    console.error("Registration Error:", err);
+    if (err.code === 11000) {
+      res.status(409).json({ success: false, message: 'User already exists (duplicate key)' });
+    } else if (err.name === 'ValidationError') {
+      // Handle Mongoose validation errors
+      const errors = {};
+      for (let field in err.errors) {
+        errors[field] = err.errors[field].message;
+      }
+      res.status(400).json({ success: false, message: 'Validation failed', errors });
+    } else {
+      res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
   }
 });
 
 // Login
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
-  const user = await User.findOne({ username });
-  if (!user) return res.json({ success: false, message: 'Invalid credentials' });
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: 'Username and password are required' });
+  }
 
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.json({ success: false, message: 'Invalid credentials' });
+  try {
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
 
-  const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '1h' });
-  res.json({ success: true, token });
+    const isValidPassword = await user.comparePassword(password);
+    if (!isValidPassword) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+
+    const token = jwt.sign({ username: user.username, id: user._id }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ success: true, message: 'Login successful', token });
+  } catch (err) {
+    console.error("Login Error:", err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
 });
 
 // Profile
