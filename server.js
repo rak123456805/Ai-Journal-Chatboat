@@ -14,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/serene_auth';
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://127.0.0.1:8000/chat';
+const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://127.0.0.1:8001/chat';
 
 // ====== MIDDLEWARE ======
 app.use(cors());
