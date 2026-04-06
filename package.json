@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "server": "node server.js",
-    "python": "python -m uvicorn deepseek_api:app --host 127.0.0.1 --port 8000",
+    "python": "python -m uvicorn deepseek_api:app --host 0.0.0.0 --port 9000",
     "start": "concurrently \"npm run server\" \"npm run python\"",
     "dev-server": "nodemon server.js",
     "dev": "concurrently \"npm run dev-server\" \"npm run python\""

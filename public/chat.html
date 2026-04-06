@@ -141,7 +141,7 @@
       chatOutput.scrollTop = chatOutput.scrollHeight;
     }
 
-    function sendMessage() {
+    async function sendMessage() {
       const message = userInput.value.trim();
       if (!message) return;
       appendMessage("user", message);
@@ -154,19 +154,32 @@
         return;
       }
 
-      fetch("/api/chat", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          message: message,
-          sessionId: localStorage.getItem('sessionId') || null
-        }),
-      })
-      .then(res => res.json())
-      .then(data => {
+      try {
+        const isWrongPort = window.location.port === '5500';
+        const apiUrl = isWrongPort ? 'http://localhost:3000/api/chat' : '/api/chat';
+
+        const res = await fetch(apiUrl, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            message: message,
+            sessionId: localStorage.getItem('sessionId') || null
+          }),
+        });
+
+        // Check if the response is actually JSON before parsing
+        const contentType = res.headers.get('content-type');
+        if (!res.ok || !contentType || !contentType.includes('application/json')) {
+          const text = await res.text();
+          console.error('Non-JSON response:', text);
+          throw new Error(`Server returned ${res.status}: ${res.statusText}. Please ensure you are using port 3000.`);
+        }
+
+        const data = await res.json();
+        
         if (data.success) {
           appendMessage("bot", data.response);
           saveMessageToHistory(data.response, "bot");
@@ -174,13 +187,12 @@
             localStorage.setItem('sessionId', data.sessionId);
           }
         } else {
-          appendMessage("bot", "Sorry, I couldn't process your message.");
+          appendMessage("bot", data.message || "Sorry, I couldn't process your message.");
         }
-      })
-      .catch(err => {
-        appendMessage("bot", "Sorry, I couldn't reach the server.");
+      } catch (err) {
+        appendMessage("bot", `Error: ${err.message}. Make sure the Node server is running on port 3000.`);
         console.error("Fetch error:", err);
-      });
+      }
     }
 
     // Chat History Management
@@ -250,38 +262,45 @@
     });
 
     // Auth check
-    function checkAuth() {
+    async function checkAuth() {
       const token = localStorage.getItem("token");
       if (!token) {
-        window.location.href = "/login";
+        window.location.href = "login.html";
         return;
       }
-      fetch("/api/profile", {
-        headers: {
-          "Authorization": `Bearer ${token}`
+      
+      try {
+        const isWrongPort = window.location.port === '5500';
+        const apiUrl = isWrongPort ? 'http://localhost:3000/api/profile' : '/api/profile';
+
+        const res = await fetch(apiUrl, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        const contentType = res.headers.get('content-type');
+        if (!res.ok || !contentType || !contentType.includes('application/json')) {
+          throw new Error('Not a JSON response');
         }
-      })
-      .then(res => res.json())
-      .then(data => {
+
+        const data = await res.json();
         if (!data.success) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          window.location.href = "/login";
+          throw new Error('Auth failed');
         }
-      })
-      .catch(err => {
+      } catch (err) {
         console.error("Auth check error:", err);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        window.location.href = "/login";
-      });
+        window.location.href = "login.html";
+      }
     }
 
     function logout() {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("sessionId");
-      window.location.href = "/";
+      window.location.href = "index.html";
     }
   </script>
 </body>

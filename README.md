@@ -168,7 +168,7 @@ start.bat
 **Terminal 1 - Start Python FastAPI backend:**
 ```bash
 cd Serene-Complete
-python -m uvicorn deepseek_api:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn deepseek_api:app --host 127.0.0.1 --port 9000 --reload
 ```
 
 **Terminal 2 - Start Node.js server:**

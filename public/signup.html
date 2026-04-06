@@ -168,21 +168,36 @@
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
 
-    const res = await fetch('/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, password })
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert('Signup successful! Redirecting to login...');
-      window.location.href = 'login.html';
-    } else {
-      let errorMessage = data.message || 'Signup failed';
-      if (data.errors) {
-        errorMessage += '\n' + Object.values(data.errors).join('\n');
+    try {
+      // Determine if we are on the wrong port (Live Server 5500 vs Node 3000)
+      const isWrongPort = window.location.port === '5500';
+      const apiUrl = isWrongPort ? 'http://localhost:3000/api/register' : '/api/register';
+
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
+
+      // Check if the response is actually JSON before parsing
+      const contentType = res.headers.get('content-type');
+      if (!res.ok || !contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        console.error('Non-JSON response:', text);
+        throw new Error(`Server returned ${res.status}: ${res.statusText}. Please ensure you are using port 3000.`);
       }
-      alert(errorMessage);
+
+      const data = await res.json();
+      
+      if (data.success) {
+        alert('Signup successful! Redirecting to login...');
+        window.location.href = 'login.html';
+      } else {
+        alert(data.message || 'Signup failed');
+      }
+    } catch (error) {
+      console.error('Signup Error:', error);
+      alert(`Error: ${error.message}\n\nTIP: You are likely using port 5500 (Live Server). Please use http://localhost:3000 instead.`);
     }
   });
 </script>

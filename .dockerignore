@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.db
+db
+data

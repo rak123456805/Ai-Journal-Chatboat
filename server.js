@@ -12,9 +12,20 @@ const fetch = require('node-fetch'); // Works in all Node versions
 // ====== CONFIG ======
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/serene_auth';
+const MONGODB_URI = process.env.MONGODB_URI; // MUST be provided in .env or Render
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://127.0.0.1:8001/chat';
+const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://127.0.0.1:9000/chat';
+
+// ====== GLOBAL ERROR HANDLERS ======
+process.on('uncaughtException', (err) => {
+  console.error('CRITICAL ERROR: Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('CRITICAL ERROR: Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
 
 // ====== MIDDLEWARE ======
 app.use(cors());
