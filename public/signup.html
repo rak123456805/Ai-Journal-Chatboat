@@ -179,25 +179,22 @@
         body: JSON.stringify({ username, email, password })
       });
 
-      // Check if the response is actually JSON before parsing
+      // Check content type before parsing
       const contentType = res.headers.get('content-type');
-      if (!res.ok || !contentType || !contentType.includes('application/json')) {
-        const text = await res.text();
-        console.error('Non-JSON response:', text);
-        throw new Error(`Server returned ${res.status}: ${res.statusText}. Please ensure you are using port 3000.`);
+      let data = {};
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
       }
 
-      const data = await res.json();
-      
-      if (data.success) {
+      if (res.ok && data.success) {
         alert('Signup successful! Redirecting to login...');
         window.location.href = 'login.html';
       } else {
-        alert(data.message || 'Signup failed');
+        alert(data.message || `Server Error: ${res.status} ${res.statusText}`);
       }
     } catch (error) {
       console.error('Signup Error:', error);
-      alert(`Error: ${error.message}\n\nTIP: You are likely using port 5500 (Live Server). Please use http://localhost:3000 instead.`);
+      alert(`Network error: ${error.message}\n\nPlease ensure your Node server is running on port 3000.`);
     }
   });
 </script>

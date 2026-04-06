@@ -170,27 +170,24 @@
           }),
         });
 
-        // Check if the response is actually JSON before parsing
+        // Check content type before parsing
         const contentType = res.headers.get('content-type');
-        if (!res.ok || !contentType || !contentType.includes('application/json')) {
-          const text = await res.text();
-          console.error('Non-JSON response:', text);
-          throw new Error(`Server returned ${res.status}: ${res.statusText}. Please ensure you are using port 3000.`);
+        let data = {};
+        if (contentType && contentType.includes('application/json')) {
+          data = await res.json();
         }
 
-        const data = await res.json();
-        
-        if (data.success) {
+        if (res.ok && data.success) {
           appendMessage("bot", data.response);
           saveMessageToHistory(data.response, "bot");
           if (data.sessionId) {
             localStorage.setItem('sessionId', data.sessionId);
           }
         } else {
-          appendMessage("bot", data.message || "Sorry, I couldn't process your message.");
+          appendMessage("bot", data.message || `Sorry, could not connect (Error: ${res.status})`);
         }
       } catch (err) {
-        appendMessage("bot", `Error: ${err.message}. Make sure the Node server is running on port 3000.`);
+        appendMessage("bot", `Network error: ${err.message}. Make sure the Node server is running on port 3000.`);
         console.error("Fetch error:", err);
       }
     }
